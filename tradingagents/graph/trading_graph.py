@@ -30,7 +30,19 @@ from tradingagents.agents.utils.agent_utils import (
     get_income_statement,
     get_news,
     get_insider_transactions,
-    get_global_news
+    get_global_news,
+    # Phase 1
+    get_options_chain,
+    get_macro_indicators,
+    get_search_trends,
+    # Phase 2
+    get_reddit_sentiment,
+    get_stocktwits_sentiment,
+    get_fear_greed_index,
+    # Phase 3
+    get_sec_filings,
+    get_crypto_data,
+    get_crypto_fear_greed,
 )
 
 from .conditional_logic import ConditionalLogic
@@ -72,23 +84,39 @@ class TradingAgentsGraph:
         )
 
         # Initialize LLMs with provider-specific thinking configuration
-        llm_kwargs = self._get_provider_kwargs()
+        # Support separate providers for deep_think and quick_think
+        deep_provider = self.config.get("deep_think_provider") or self.config["llm_provider"]
+        deep_url = self.config.get("deep_think_backend_url") or self.config.get("backend_url")
+        quick_provider = self.config.get("quick_think_provider") or self.config["llm_provider"]
+        quick_url = self.config.get("quick_think_backend_url") or self.config.get("backend_url")
+
+        deep_kwargs = self._get_provider_kwargs(deep_provider)
+        quick_kwargs = self._get_provider_kwargs(quick_provider)
+
+        # Pass per-LLM API keys if configured
+        deep_api_key = self.config.get("deep_think_api_key")
+        if deep_api_key:
+            deep_kwargs["api_key"] = deep_api_key
+        quick_api_key = self.config.get("quick_think_api_key")
+        if quick_api_key:
+            quick_kwargs["api_key"] = quick_api_key
 
         # Add callbacks to kwargs if provided (passed to LLM constructor)
         if self.callbacks:
-            llm_kwargs["callbacks"] = self.callbacks
+            deep_kwargs["callbacks"] = self.callbacks
+            quick_kwargs["callbacks"] = self.callbacks
 
         deep_client = create_llm_client(
-            provider=self.config["llm_provider"],
+            provider=deep_provider,
             model=self.config["deep_think_llm"],
-            base_url=self.config.get("backend_url"),
-            **llm_kwargs,
+            base_url=deep_url,
+            **deep_kwargs,
         )
         quick_client = create_llm_client(
-            provider=self.config["llm_provider"],
+            provider=quick_provider,
             model=self.config["quick_think_llm"],
-            base_url=self.config.get("backend_url"),
-            **llm_kwargs,
+            base_url=quick_url,
+            **quick_kwargs,
         )
 
         self.deep_thinking_llm = deep_client.get_llm()
@@ -130,10 +158,10 @@ class TradingAgentsGraph:
         # Set up the graph
         self.graph = self.graph_setup.setup_graph(selected_analysts)
 
-    def _get_provider_kwargs(self) -> Dict[str, Any]:
+    def _get_provider_kwargs(self, provider: str = None) -> Dict[str, Any]:
         """Get provider-specific kwargs for LLM client creation."""
         kwargs = {}
-        provider = self.config.get("llm_provider", "").lower()
+        provider = (provider or self.config.get("llm_provider", "")).lower()
 
         if provider == "google":
             thinking_level = self.config.get("google_thinking_level")
@@ -156,11 +184,18 @@ class TradingAgentsGraph:
                     get_stock_data,
                     # Technical indicators
                     get_indicators,
+                    # Options data (Phase 1)
+                    get_options_chain,
                 ]
             ),
             "social": ToolNode(
                 [
-                    # News tools for social media analysis
+                    # Real social sentiment tools (Phase 2)
+                    get_reddit_sentiment,
+                    get_stocktwits_sentiment,
+                    get_search_trends,
+                    get_fear_greed_index,
+                    # News for context
                     get_news,
                 ]
             ),
@@ -170,6 +205,8 @@ class TradingAgentsGraph:
                     get_news,
                     get_global_news,
                     get_insider_transactions,
+                    # Macro data (Phase 1)
+                    get_macro_indicators,
                 ]
             ),
             "fundamentals": ToolNode(
@@ -179,6 +216,8 @@ class TradingAgentsGraph:
                     get_balance_sheet,
                     get_cashflow,
                     get_income_statement,
+                    # SEC filings (Phase 3)
+                    get_sec_filings,
                 ]
             ),
         }

@@ -24,6 +24,20 @@ from .alpha_vantage import (
 )
 from .alpha_vantage_common import AlphaVantageRateLimitError
 
+# Phase 1: Options, FRED, Google Trends
+from .yfinance_options import get_options_chain_yfinance
+from .fred_macro import get_macro_indicators_fred
+from .google_trends import get_search_trends_google
+
+# Phase 2: Reddit, Stocktwits, Fear & Greed
+from .reddit_social import get_reddit_sentiment_praw
+from .stocktwits_social import get_stocktwits_sentiment_api
+from .fear_greed import get_fear_greed_index_cnn
+
+# Phase 3: SEC EDGAR, CoinGecko
+from .sec_edgar import get_sec_filings_edgar
+from .coingecko import get_crypto_data_coingecko, get_crypto_fear_greed_coingecko
+
 # Configuration and routing logic
 from .config import get_config
 
@@ -57,12 +71,58 @@ TOOLS_CATEGORIES = {
             "get_global_news",
             "get_insider_transactions",
         ]
-    }
+    },
+    "options_data": {
+        "description": "Options chain data (IV, volume, OI, put/call ratio)",
+        "tools": [
+            "get_options_chain"
+        ]
+    },
+    "macro_data": {
+        "description": "Macroeconomic indicators from FRED",
+        "tools": [
+            "get_macro_indicators"
+        ]
+    },
+    "search_trends": {
+        "description": "Google Trends search interest",
+        "tools": [
+            "get_search_trends"
+        ]
+    },
+    "social_sentiment": {
+        "description": "Social media sentiment (Reddit, Stocktwits, Fear & Greed)",
+        "tools": [
+            "get_reddit_sentiment",
+            "get_stocktwits_sentiment",
+            "get_fear_greed_index",
+        ]
+    },
+    "sec_filings": {
+        "description": "SEC EDGAR filings",
+        "tools": [
+            "get_sec_filings"
+        ]
+    },
+    "crypto_data": {
+        "description": "Cryptocurrency data from CoinGecko",
+        "tools": [
+            "get_crypto_data",
+            "get_crypto_fear_greed",
+        ]
+    },
 }
 
 VENDOR_LIST = [
     "yfinance",
     "alpha_vantage",
+    "fred",
+    "google_trends",
+    "reddit",
+    "stocktwits",
+    "cnn",
+    "sec_edgar",
+    "coingecko",
 ]
 
 # Mapping of methods to their vendor-specific implementations
@@ -106,6 +166,39 @@ VENDOR_METHODS = {
     "get_insider_transactions": {
         "alpha_vantage": get_alpha_vantage_insider_transactions,
         "yfinance": get_yfinance_insider_transactions,
+    },
+    # options_data (Phase 1)
+    "get_options_chain": {
+        "yfinance": get_options_chain_yfinance,
+    },
+    # macro_data (Phase 1)
+    "get_macro_indicators": {
+        "fred": get_macro_indicators_fred,
+    },
+    # search_trends (Phase 1)
+    "get_search_trends": {
+        "google_trends": get_search_trends_google,
+    },
+    # social_sentiment (Phase 2)
+    "get_reddit_sentiment": {
+        "reddit": get_reddit_sentiment_praw,
+    },
+    "get_stocktwits_sentiment": {
+        "stocktwits": get_stocktwits_sentiment_api,
+    },
+    "get_fear_greed_index": {
+        "cnn": get_fear_greed_index_cnn,
+    },
+    # sec_filings (Phase 3)
+    "get_sec_filings": {
+        "sec_edgar": get_sec_filings_edgar,
+    },
+    # crypto_data (Phase 3)
+    "get_crypto_data": {
+        "coingecko": get_crypto_data_coingecko,
+    },
+    "get_crypto_fear_greed": {
+        "coingecko": get_crypto_fear_greed_coingecko,
     },
 }
 
