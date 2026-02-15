@@ -1,4 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage
+import re
 import time
 import json
 from tradingagents.agents.utils.agent_utils import get_fundamentals, get_balance_sheet, get_cashflow, get_income_statement, get_insider_transactions, get_sec_filings
@@ -51,14 +53,33 @@ def create_fundamentals_analyst(llm):
 
         result = chain.invoke(state["messages"])
 
-        report = ""
+        if result.tool_calls:
+            # Intermediate step — don't overwrite report with empty string
+            return {"messages": [result]}
 
-        if len(result.tool_calls) == 0:
-            report = result.content
+        # Final step — capture report
+        content = result.content or ""
+
+        # Detect if model wrote inline tool calls instead of a real report
+        if len(content) < 300 or re.search(r'get_\w+\s*\{', content):
+            # Re-invoke LLM without tools to force a written analysis
+            report_chain = prompt | llm
+            nudge = HumanMessage(
+                content="Based on all the financial data gathered above, write your "
+                "comprehensive fundamentals analysis report now with a summary table at the end. "
+                "Do not attempt to call any tools."
+            )
+            retry_msgs = state["messages"] + [result, nudge]
+            retry_result = report_chain.invoke(retry_msgs)
+            report = retry_result.content or content
+            return {
+                "messages": [result, nudge, retry_result],
+                "fundamentals_report": report,
+            }
 
         return {
             "messages": [result],
-            "fundamentals_report": report,
+            "fundamentals_report": content,
         }
 
     return fundamentals_analyst_node

@@ -1,4 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage
+import re
 import time
 import json
 from tradingagents.agents.utils.agent_utils import get_news, get_global_news, get_macro_indicators
@@ -46,14 +48,33 @@ def create_news_analyst(llm):
         chain = prompt | llm.bind_tools(tools)
         result = chain.invoke(state["messages"])
 
-        report = ""
+        if result.tool_calls:
+            # Intermediate step — don't overwrite report with empty string
+            return {"messages": [result]}
 
-        if len(result.tool_calls) == 0:
-            report = result.content
+        # Final step — capture report
+        content = result.content or ""
+
+        # Detect if model wrote inline tool calls instead of a real report
+        if len(content) < 300 or re.search(r'get_\w+\s*\{', content):
+            # Re-invoke LLM without tools to force a written analysis
+            report_chain = prompt | llm
+            nudge = HumanMessage(
+                content="Based on all the news and macro data gathered above, write your "
+                "comprehensive news analysis report now with a summary table at the end. "
+                "Do not attempt to call any tools."
+            )
+            retry_msgs = state["messages"] + [result, nudge]
+            retry_result = report_chain.invoke(retry_msgs)
+            report = retry_result.content or content
+            return {
+                "messages": [result, nudge, retry_result],
+                "news_report": report,
+            }
 
         return {
             "messages": [result],
-            "news_report": report,
+            "news_report": content,
         }
 
     return news_analyst_node
