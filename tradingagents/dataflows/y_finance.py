@@ -184,6 +184,16 @@ def get_stock_stats_indicators_window(
     return result_str
 
 
+def _find_latest_cache_file(cache_dir: str, symbol: str) -> str:
+    """Find the most recent YFin cache file for a symbol."""
+    import glob as glob_mod
+    pattern = os.path.join(cache_dir, f"{symbol}-YFin-data-*.csv")
+    matches = sorted(glob_mod.glob(pattern))
+    if matches:
+        return matches[-1]
+    return os.path.join(cache_dir, f"{symbol}-YFin-data-2015-01-01-2025-03-25.csv")
+
+
 def _get_stock_stats_bulk(
     symbol: Annotated[str, "ticker symbol of the company"],
     indicator: Annotated[str, "technical indicator to calculate"],
@@ -206,10 +216,7 @@ def _get_stock_stats_bulk(
         # Local data path
         try:
             data = pd.read_csv(
-                os.path.join(
-                    config.get("data_cache_dir", "data"),
-                    f"{symbol}-YFin-data-2015-01-01-2025-03-25.csv",
-                )
+                _find_latest_cache_file(config.get("data_cache_dir", "data"), symbol)
             )
             df = wrap(data)
         except FileNotFoundError:

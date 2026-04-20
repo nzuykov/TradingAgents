@@ -1122,9 +1122,8 @@ def run_analysis():
 
             trace.append(chunk)
 
-        # Get final state and decision
+        # Get final state
         final_state = trace[-1]
-        decision = graph.process_signal(final_state["final_trade_decision"])
 
         # Update all agent statuses to completed
         for agent in message_buffer.agent_status:

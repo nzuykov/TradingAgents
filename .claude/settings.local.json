@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo:*)",
+      "Bash(printf '@echo off\\\\nclaude --dangerously-skip-permissions %%*\\\\n')",
+      "Bash(powershell -Command \"[Environment]::GetEnvironmentVariable\\(''Path'', ''User''\\)\")",
+      "Bash(powershell -Command \"$current = [Environment]::GetEnvironmentVariable\\(''Path'', ''User''\\); [Environment]::SetEnvironmentVariable\\(''Path'', $current + '';C:\\\\Users\\\\zouik'', ''User''\\)\")",
+      "Bash(powershell -Command '$current = [Environment]::GetEnvironmentVariable\\(\"\"Path\"\", \"\"User\"\"\\); [Environment]::SetEnvironmentVariable\\(\"\"Path\"\", \"\"$current;C:\\\\Users\\\\zouik\"\", \"\"User\"\"\\)')",
+      "Bash(tr:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell -File:*)"
+    ]
+  }
+}

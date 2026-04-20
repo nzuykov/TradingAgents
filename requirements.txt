@@ -13,6 +13,7 @@ parsel
 requests
 tqdm
 pytz
+python-dotenv
 redis
 chainlit
 rich

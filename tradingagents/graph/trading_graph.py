@@ -96,10 +96,20 @@ class TradingAgentsGraph:
         # Pass per-LLM API keys if configured
         deep_api_key = self.config.get("deep_think_api_key")
         if deep_api_key:
-            deep_kwargs["api_key"] = deep_api_key
+            key_name = (
+                "google_api_key"
+                if (deep_provider or "").lower() == "google"
+                else "api_key"
+            )
+            deep_kwargs[key_name] = deep_api_key
         quick_api_key = self.config.get("quick_think_api_key")
         if quick_api_key:
-            quick_kwargs["api_key"] = quick_api_key
+            key_name = (
+                "google_api_key"
+                if (quick_provider or "").lower() == "google"
+                else "api_key"
+            )
+            quick_kwargs[key_name] = quick_api_key
 
         # Add callbacks to kwargs if provided (passed to LLM constructor)
         if self.callbacks:
@@ -133,7 +143,10 @@ class TradingAgentsGraph:
         self.tool_nodes = self._create_tool_nodes()
 
         # Initialize components
-        self.conditional_logic = ConditionalLogic()
+        self.conditional_logic = ConditionalLogic(
+            self.config.get("max_debate_rounds", 1),
+            self.config.get("max_risk_discuss_rounds", 1),
+        )
         self.graph_setup = GraphSetup(
             self.quick_thinking_llm,
             self.deep_thinking_llm,
@@ -146,7 +159,7 @@ class TradingAgentsGraph:
             self.conditional_logic,
         )
 
-        self.propagator = Propagator()
+        self.propagator = Propagator(self.config.get("max_recur_limit", 100))
         self.reflector = Reflector(self.quick_thinking_llm)
         self.signal_processor = SignalProcessor(self.quick_thinking_llm)
 
@@ -290,13 +303,11 @@ class TradingAgentsGraph:
         }
 
         # Save to file
-        directory = Path(f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/")
+        results_dir = self.config.get("results_dir", "./results")
+        directory = Path(results_dir) / self.ticker / "TradingAgentsStrategy_logs"
         directory.mkdir(parents=True, exist_ok=True)
 
-        with open(
-            f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/full_states_log_{trade_date}.json",
-            "w",
-        ) as f:
+        with open(directory / f"full_states_log_{trade_date}.json", "w") as f:
             json.dump(self.log_states_dict, f, indent=4)
 
     def reflect_and_remember(self, returns_losses):

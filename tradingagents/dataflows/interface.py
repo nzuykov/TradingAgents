@@ -1,4 +1,5 @@
 from typing import Annotated
+import requests
 
 # Import from vendor-specific modules
 from .y_finance import (
@@ -249,7 +250,11 @@ def route_to_vendor(method: str, *args, **kwargs):
 
         try:
             return impl_func(*args, **kwargs)
-        except AlphaVantageRateLimitError:
-            continue  # Only rate limits trigger fallback
+        except (AlphaVantageRateLimitError, ConnectionError, TimeoutError, requests.exceptions.RequestException) as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Vendor '{vendor}' failed for '{method}': {e}. Trying next vendor."
+            )
+            continue
 
     raise RuntimeError(f"No available vendor for '{method}'")

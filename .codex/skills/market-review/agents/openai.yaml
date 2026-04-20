@@ -1,0 +1,4 @@
+interface:
+  display_name: "Market Review"
+  short_description: "Run no-API full fixed-agent market review workflows"
+  default_prompt: "Use $market-review to run the full fixed-agent analysis team for my symbols without external LLM APIs."
